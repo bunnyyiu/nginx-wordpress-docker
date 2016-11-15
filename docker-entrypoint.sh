@@ -34,6 +34,16 @@ if [ "$1" == nginx ]; then
     sed -i 's/upload_max_filesize *= *[0-9]\+[kKmMgG]\?/upload_max_filesize='"${POST_MAX_SIZE}"'/' /etc/nginx/global/wordpress.conf
     sed -i 's/post_max_size *= *[0-9]\+[kKmMgG]\?/post_max_size='"${POST_MAX_SIZE}"'/' /etc/nginx/global/wordpress.conf
 
+    # In Kubernetes, containers in pods are shared with the same ip.
+    # We inject this to make it work with WORDPRESS_HOST=localhost.
+    if [ -z "${WORDPRESS_HOST}" ]; then
+        sed -i "s/fastcgi_pass [^:]*/fastcgi_pass wordpress/g" \
+            /etc/nginx/global/wordpress.conf
+    else
+        sed -i "s/fastcgi_pass [^:]*/fastcgi_pass ${WORDPRESS_HOST}/g" \
+            /etc/nginx/global/wordpress.conf
+    fi
+
     if [ "${BEHIND_PROXY}" == "true" ]; then
         sed -i 's/real_ip_header .*;/real_ip_header '"$(escape_sed "${REAL_IP_HEADER}")"';/' /etc/nginx/global/proxy.conf
         sed -i 's/set_real_ip_from .*;/set_real_ip_from '"$(escape_sed "${REAL_IP_FROM}")"';/' /etc/nginx/global/proxy.conf
